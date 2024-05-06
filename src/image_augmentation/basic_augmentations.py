@@ -32,6 +32,23 @@ def augment_scale(foreground, bg_h, mask, fg_h, fg_w, bg_w):
         o_w, o_h = int(scale * fg_w), int(scale * fg_h)
         if bg_w - o_w > 0 and bg_h - o_h > 0 and o_w > 0 and o_h > 0:
             break
-    foreground = foreground.resize((o_w, o_h), Image.ANTIALIAS)
-    mask = mask.resize((o_w, o_h), Image.ANTIALIAS)
+    foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
+    mask = mask.resize((o_w, o_h), Image.LANCZOS)
     return foreground, mask, o_h, o_w
+
+def augment_scale_relative_to_background(foreground, mask, bg_w, bg_h, orig_w, orig_h, min_rel_scale, max_rel_scale):
+    rel_scale = random.uniform(min_rel_scale, max_rel_scale)
+
+    max_obj_h, max_obj_w = rel_scale * bg_h, rel_scale * bg_w
+
+    obj_scale = min(max_obj_h/orig_h, max_obj_w/orig_w)
+
+    o_w = int(obj_scale*orig_w)
+    o_h = int(obj_scale*orig_h)
+    foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
+    mask = mask.resize((o_w, o_h), Image.LANCZOS)
+
+    return foreground, mask, o_h, o_w
+
+
+

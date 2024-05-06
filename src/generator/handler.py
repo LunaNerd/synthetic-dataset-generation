@@ -35,6 +35,7 @@ def generate_synthetic_dataset(
     rotation: bool,
     scale: bool,
     multithreading: bool,
+    label_json: str
 ):
     """
     Generate synthetic dataset
@@ -47,6 +48,7 @@ def generate_synthetic_dataset(
     :param rotation: enable rotation of objects
     :param scale: enable scaling of objects
     :param multithreading: use multithreading
+    :param label_json
     """
 
     for split_type in ["test", "train", "validation"]:
@@ -59,7 +61,7 @@ def generate_synthetic_dataset(
             labels,
             split_output_dir,
         ) = load_relevant_data(
-            output_dir, object_json, distractor_json, background_json, split_type,
+            output_dir, object_json, distractor_json, background_json, split_type, label_json
         )
         full_anno_list, full_img_list, params_list = create_list_of_img_configurations(
             objects_data,
@@ -90,12 +92,16 @@ def load_relevant_data(
     distractor_json: str,
     background_json: str,
     split_type: str,
+    label_json: str
 ):
     output_dir = (Path(output_dir) / split_type).resolve()
     output_dir.mkdir(exist_ok=True)
     # Objects
     object_files = load_data_from_split_file(object_json, split_type)
-    labels = ["box"] * len(object_files)
+    #labels = ["box"] * len(object_files)
+    labels = []
+    if len(object_files) != 0:
+        labels = load_labels(label_json)
     objects_data = [ImgDataRGBA(object_files[i], labels[i]) for i in range(len(labels))]
     random.shuffle(objects_data)
     # Distractors
@@ -110,6 +116,9 @@ def load_relevant_data(
     random.shuffle(background_files)
     return background_files, distractor_data, objects_data, labels, output_dir
 
+def load_labels(label_json):
+    with open(label_json) as f:
+        return json.load(f)
 
 def load_data_from_split_file(json_file: Union[str, Path], split_type: str):
     if isinstance(json_file, str):

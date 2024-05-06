@@ -12,7 +12,23 @@ class BaseImgData:
     def __init__(self, img_path: Path, label: str):
         self.img_path = img_path
         self.label = label
-        self.label_id = [f["id"] for f in OBJECT_CATEGORIES if label == f["name"]][0]
+        #print(type(OBJECT_CATEGORIES[0]['id']))
+        #print(len([f["id"] for f in OBJECT_CATEGORIES if label == f["name"]]))
+        self.label_id = -1
+        for cat in OBJECT_CATEGORIES:
+            """
+            print()
+            print(cat)
+            print(type(cat))
+            print(label)
+            print(type(label))
+            """
+            if str(cat["name"]) == str(int(label)):
+                #print("found")
+                self.label_id = str(cat["id"])
+        if self.label_id == -1:
+            raise NotImplementedError("label_id problems")
+
         self.load_complementary_data()
 
     def __str__(self):
@@ -111,3 +127,6 @@ class ImgDataRGBA(BaseImgData):
                     print(f"No RGBA channel found for {self.img_path}")
                     return None
         return new_img
+
+    def get_id(self):
+        return self.label_id

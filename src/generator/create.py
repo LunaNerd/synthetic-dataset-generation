@@ -1,6 +1,6 @@
 from PIL import Image
 
-from src.config import MAX_DEGREES, MAX_ATTEMPTS_TO_SYNTHESIZE
+from src.config import MAX_DEGREES, MAX_ATTEMPTS_TO_SYNTHESIZE, OBJECT_DOMAIN_KNOWLEDGE
 from src.generator.annotations import (
     create_image_and_annotation_dict_mscoco,
     save_single_annotation_data_to_json,
@@ -10,6 +10,7 @@ from src.generator.utils import PIL2array3C
 from src.image_augmentation.basic_augmentations import (
     augment_scale,
     augment_rotation,
+    augment_scale_relative_to_background,
 )
 from src.image_augmentation.blendings import apply_blendings_and_paste_onto_background
 from src.image_augmentation.misc import (
@@ -111,17 +112,38 @@ def create_image_anno(
                 continue
             else:
                 foreground, mask, orig_h, orig_w = loaded_data
+                cat_id = img_data.get_id()
             # Augmentations
             o_w, o_h = orig_w, orig_h
-            if scale_augment:
-                foreground, mask, o_h, o_w = augment_scale(
-                    foreground, bg_h, mask, orig_h, orig_w, bg_w
+            #    If label_id is present in OBJECT_DOMAIN_KNOWLEDGE: use the min/max relative sizes and max rotation from the dictionary
+            cat_id = int(cat_id)
+            if cat_id in OBJECT_DOMAIN_KNOWLEDGE:
+                #print("domain_knowledge")
+                min_rel_scale = OBJECT_DOMAIN_KNOWLEDGE[cat_id]["min_rel_scale"]
+                max_rel_scale = OBJECT_DOMAIN_KNOWLEDGE[cat_id]["max_rel_scale"]
+                max_obj_degrees = OBJECT_DOMAIN_KNOWLEDGE[cat_id]["max_obj_degrees"]
+                
+                if scale_augment:
+                    foreground, mask, o_h, o_w = augment_scale_relative_to_background(
+                        foreground, mask, bg_w, bg_h, orig_w, orig_h, min_rel_scale, max_rel_scale)
+                if rotation_augment:
+                    foreground, mask, o_h, o_w = augment_rotation(
+                        foreground, bg_h, mask, max_obj_degrees, bg_w
+                    )
+            #    Else: fallback on default scale_augment limits. 
+            else:
+                print("no_domain_knowledge")
+                if scale_augment:
+                    
+                    foreground, mask, o_h, o_w = augment_scale(
+                        foreground, bg_h, mask, orig_h, orig_w, bg_w
+                    )
+                if rotation_augment:
+                    max_degrees = MAX_DEGREES
+                    foreground, mask, o_h, o_w = augment_rotation(
+                        foreground, bg_h, mask, max_degrees, bg_w
                 )
-            if rotation_augment:
-                max_degrees = MAX_DEGREES
-                foreground, mask, o_h, o_w = augment_rotation(
-                    foreground, bg_h, mask, max_degrees, bg_w
-                )
+                    
             # Determine position
             xmin, xmax, ymin, ymax = img_data.get_annotation_from_mask()
             x, y, attempt = find_valid_object_position(
@@ -152,6 +174,8 @@ def create_image_anno(
     for i in range(len(blending_list)):
         if blending_list[i] == "motion":
             backgrounds[i] = LinearMotionBlur3C(PIL2array3C(backgrounds[i]))
+        #print(bg_w)
+        #print(bg_h)
         backgrounds[i].save(img_files[i])
 
     return img_files, masks, mask_category_ids

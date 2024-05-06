@@ -72,7 +72,7 @@ def create_image_and_annotation_dict_mscoco(
         annotation_dict = {
             "segmentation": segmentations,
             "iscrowd": 0,
-            "image_id": image_id_int,
+            "image_id": image_id_int, 
             "category_id": mask_category_ids[mask_id_int],  # all have category box
             "id": mask_id_int,
             "bbox": bbox,

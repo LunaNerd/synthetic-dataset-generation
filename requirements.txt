@@ -3,7 +3,8 @@ pillow
 matplotlib
 tqdm
 scikit-image==0.18.*
-git+https://github.com/lamhoangtung/pyblur.git
+#git+https://github.com/lamhoangtung/pyblur.git
+git+https://github.com/PD-Mera/pyblur.git
 fpie
 opencv-python
 aiohttp
