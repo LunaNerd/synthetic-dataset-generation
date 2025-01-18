@@ -5,11 +5,12 @@ BLENDING_LIST = [
     # "poisson",  # takes a lot of time and results are not that good
     # "poisson-fast",  # only with Docker GPU
     "none",
-    # "box",
-    "motion",
-    # "mixed",
-    # "illumination",
-    # "gamma_correction",
+    "box",
+    #"motion",     the motion blending method broke, is possible to copy old version from: 
+    #              https://github.com/PD-Mera/pyblur/blob/master/pyblur/LinearMotionBlur.py and get it working
+    "mixed",
+    "illumination",
+    "gamma_correction",
 ]
 
 # Parameters for images

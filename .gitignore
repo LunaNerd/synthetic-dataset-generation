@@ -1,1 +1,10 @@
+# https://stackoverflow.com/a/72813340/29257192
 .idea
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+__pycache__/
+tmp/
+data/demo_dataset_2/
+pyblur/
+requirements2.txt
+venv/

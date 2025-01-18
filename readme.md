@@ -54,10 +54,13 @@ There two places to make configurations:
 
 ### Locally
 
-Install the requirements
+(Install the requirements) -> See `pip_semi_guide.md`, you might get it working witht the requirements, but I didn't figure it out.
 
 ```shell
-pip install -r requirements.txt
+cd pyblur
+pip install -e .
+cd ..
+pip install -r requirements2.txt
 ```
 
 And run
