@@ -1,3 +1,6 @@
+git config --global user.email luna.versmissen@hotmail.be
+git config --global user.name luversmi
+
 ## Setup python venv
 (if working on jupyterhub environment where home directory is erased with every new instance)
 

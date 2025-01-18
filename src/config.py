@@ -15,10 +15,18 @@ BLENDING_LIST = [
 
 # Parameters for images
 MIN_NO_OF_OBJECTS = 1
-MAX_NO_OF_OBJECTS = 4
-MIN_NO_OF_DISTRACTOR_OBJECTS = 2
+MAX_NO_OF_OBJECTS = 3
+MIN_NO_OF_DISTRACTOR_OBJECTS = 1
 MAX_NO_OF_DISTRACTOR_OBJECTS = 4
 MAX_ATTEMPTS_TO_SYNTHESIZE = 20
+
+# OPTIONS:
+#   GLOBAL = use MIN_SCALE and MAX_SCALE for all objects and distractors
+#   PER_CLASS_STD = use std and mean per object class from inside complementary data, 
+#                   distractors still use MIN_SCALE and MAX_SCALE,
+# if scale_augment = False inside generate_synthetic_data.py, no scaling will be applied.
+AUGMENTATION_SIZE_OPTION = "PER_CLASS_STD"
+#AUGMENTATION_ROTATION_OPTION
 
 # Parameters for objects in images
 MIN_SCALE = 0.15  # min scale for scale augmentation (maximum extend in each direction, 1=same size as image)
@@ -35,9 +43,17 @@ MINFILTER_SIZE = 3
 
 # Other
 OBJECT_CATEGORIES = [
-    {"id": 0, "name": "box"},
-    {"id": 2, "name": "distractor"},
+    {"id": 0, "name": "box_type_0"},
+    {"id": 1, "name": "box_type_1"},
 ]  # note: distractor needs to be second position
+
+DISTRACTOR_NAME = "distractor"
+DISTRACTOR_ID = 2
+
 IGNORE_LABELS = [OBJECT_CATEGORIES[1]["id"]]  # list of category ID for which no annotations will be generated
 INVERTED_MASK = False  # Set to true if white pixels represent background
 SUPPORTED_IMG_FILE_TYPES = (".jpg", "jpeg", ".png", ".gif")
+
+OBJECT_COMPLEMENTARY_DATA_PATH = "/project_ghent/luversmi/attempt2/synthetic-dataset-generation/data/objects/complementary_data.json"
+OBJECT_CATEGORIES_PATH = "/project_ghent/luversmi/attempt2/synthetic-dataset-generation/data/objects/splits_labels.json"
+

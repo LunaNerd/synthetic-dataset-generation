@@ -1,19 +1,26 @@
 from pathlib import Path
 
+import json
 import cv2
 import numpy as np
 from PIL import Image, ImageFilter
 
 from src.config import INVERTED_MASK, MINFILTER_SIZE
-from src.config import OBJECT_CATEGORIES
+from src.config import OBJECT_CATEGORIES, OBJECT_COMPLEMENTARY_DATA_PATH
 
 
 class BaseImgData:
-    def __init__(self, img_path: Path, label: str):
+    # (Class variable, behaves different from object variable, is shared acros all objects
+    complementary_data = None
+    
+    def __init__(self, img_path: Path, label_id: str, label = None):
         self.img_path = img_path
-        self.label = label
-        self.label_id = [f["id"] for f in OBJECT_CATEGORIES if label == f["name"]][0]
-        self.load_complementary_data()
+        self.label_id = label_id
+        if not label:
+            self.label = [f["name"] for f in OBJECT_CATEGORIES if label_id == f["id"]][0]
+        else:
+            self.label = label
+        #self.load_complementary_data()
 
     def __str__(self):
         return f"Label {self.label} from {self.img_path}"
@@ -76,11 +83,19 @@ class BaseImgData:
 
 
 class ImgDataRGBA(BaseImgData):
-    def __init__(self, img_path: Path, label):
-        super().__init__(img_path, label)
+    def __init__(self, img_path: Path, label_id, label=None):
+        super().__init__(img_path, label_id, label=label)
 
     def load_complementary_data(self):
-        pass
+        if not ImgDataRGBA.complementary_data:
+            if isinstance(OBJECT_COMPLEMENTARY_DATA_PATH, str):
+                json_file = Path(OBJECT_COMPLEMENTARY_DATA_PATH)
+            else:
+                json_file = OBJECT_COMPLEMENTARY_DATA_PATH
+            assert json_file.exists(), f"File {json_file.resolve()} does not exist!"
+            with open(json_file) as json_f:
+                ImgDataRGBA.complementary_data = json.load(json_f)
+        return ImgDataRGBA.complementary_data.get(self.label, None)
 
     def get_mask(self, opencv=False):
         with open(self.img_path.as_posix(), "rb") as f:

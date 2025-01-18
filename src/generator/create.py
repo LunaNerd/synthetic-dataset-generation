@@ -9,6 +9,7 @@ from src.generator.annotations import (
 from src.generator.utils import PIL2array3C
 from src.image_augmentation.basic_augmentations import (
     augment_scale,
+    augment_scale_std,
     augment_rotation,
 )
 from src.image_augmentation.blendings import apply_blendings_and_paste_onto_background
@@ -19,6 +20,8 @@ from src.image_augmentation.misc import (
 from src.image_augmentation.motion_blur import LinearMotionBlur3C
 from src.image_augmentation.object_position import find_valid_object_position
 from src.models.auxiliary import ImgSize, ImgPosition
+
+from src.config import AUGMENTATION_SIZE_OPTION
 
 
 def create_image_anno_wrapper(
@@ -107,6 +110,7 @@ def create_image_anno(
         for idx, img_data in enumerate(all_objects):
             # Load object and mask; augment it; find object position;
             loaded_data = img_data.load_object_data()
+            complementary_data = img_data.load_complementary_data()
             if loaded_data is None:
                 continue
             else:
@@ -114,9 +118,21 @@ def create_image_anno(
             # Augmentations
             o_w, o_h = orig_w, orig_h
             if scale_augment:
-                foreground, mask, o_h, o_w = augment_scale(
-                    foreground, bg_h, mask, orig_h, orig_w, bg_w
+                if AUGMENTATION_SIZE_OPTION == "PER_CLASS_STD":
+                    foreground, mask, o_h, o_w = augment_scale_std(
+                        foreground, 
+                        bg_h, mask, 
+                        orig_h, 
+                        orig_w, 
+                        bg_w, 
+                        complementary_data
+                    )
+                elif AUGMENTATION_SIZE_OPTION == "GLOBAL":
+                    foreground, mask, o_h, o_w = augment_scale(
+                        foreground, bg_h, mask, orig_h, orig_w, bg_w
                 )
+                else:
+                    raise ValueError("Invalid AUGMENTATION_SIZE_OPTION")
             if rotation_augment:
                 max_degrees = MAX_DEGREES
                 foreground, mask, o_h, o_w = augment_rotation(
@@ -141,7 +157,9 @@ def create_image_anno(
             mask_category_ids.append(img_data.label_id)
             if idx >= len(objects):
                 continue
+        print(attempt)
         if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
+            
             continue  # could not create image yet, thus trying again
         else:
             break  # found synthesized image, thus break

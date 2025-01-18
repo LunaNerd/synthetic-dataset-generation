@@ -35,3 +35,49 @@ def augment_scale(foreground, bg_h, mask, fg_h, fg_w, bg_w):
     foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
     mask = mask.resize((o_w, o_h), Image.LANCZOS)
     return foreground, mask, o_h, o_w
+
+def augment_scale_std(foreground, bg_h, mask, fg_h, fg_w, bg_w, complementary_data):
+    mean_rel_size = complementary_data["mean_rel_size"]
+    std_rel_size = complementary_data["std_rel_size"]
+    min_rel_size = complementary_data["min_rel_size"]
+    max_rel_size = complementary_data["max_rel_size"]
+    
+    while True:
+        scale = random.gauss(mean_rel_size, std_rel_size)
+        scale = max(scale, min_rel_size)
+        scale = min(scale, max_rel_size)
+
+        wh_ratio = fg_w / fg_h
+
+        # wanted_w_pixels = max(bg_w * scale, min_rel_size)
+        # wanted_w_pixels = min(bg_w * scale, max_rel_size)
+
+        # wanted_h_pixels = max(bg_h * scale, min_pixels)
+        # wanted_h_pixels = min(bg_h * scale, min_pixels)
+
+        wanted_h_pixels = bg_h * scale
+        wanted_w_pixels = bg_w * scale
+
+        print(scale)
+        
+        o_w = None
+        o_h = None
+
+        if fg_w > fg_h:
+            o_h = wanted_h_pixels
+            o_w = int(o_h * wh_ratio)
+            o_h = int(o_h)
+
+        else:
+            #fg_w <= fg_h
+            o_w = wanted_w_pixels
+            o_h = int(o_w / wh_ratio)
+            o_w = int(o_w)
+
+        if bg_w - o_w > 0 and bg_h - o_h > 0 and o_w > 0 and o_h > 0:
+            break
+
+    foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
+    mask = mask.resize((o_w, o_h), Image.LANCZOS)
+
+    return foreground, mask, o_h, o_w

@@ -16,6 +16,9 @@ from src.config import (
     MAX_NO_OF_OBJECTS,
     MIN_NO_OF_DISTRACTOR_OBJECTS,
     MAX_NO_OF_DISTRACTOR_OBJECTS,
+    OBJECT_CATEGORIES_PATH,
+    DISTRACTOR_NAME,
+    DISTRACTOR_ID
 )
 from src.generator.create import create_image_anno_wrapper
 from src.generator.join_annotations import (
@@ -95,13 +98,16 @@ def load_relevant_data(
     output_dir.mkdir(exist_ok=True)
     # Objects
     object_files = load_data_from_split_file(object_json, split_type)
-    labels = ["box"] * len(object_files)
-    objects_data = [ImgDataRGBA(object_files[i], labels[i]) for i in range(len(labels))]
+    label_ids = load_data_from_labels_file(OBJECT_CATEGORIES_PATH, split_type)
+    objects_data = [ImgDataRGBA(object_files[i], label_ids[i]) for i in range(len(label_ids))]
     random.shuffle(objects_data)
+    labels = []
+    for o in objects_data:
+        labels.append(o.label)
     # Distractors
     distractor_files = load_data_from_split_file(distractor_json, split_type)
     distractor_data = [
-        ImgDataRGBA(distractor_files[i], OBJECT_CATEGORIES[1]["name"])
+        ImgDataRGBA(distractor_files[i], DISTRACTOR_ID, DISTRACTOR_NAME)
         for i in range(len(distractor_files))
     ]
     random.shuffle(distractor_data)
@@ -123,6 +129,15 @@ def load_data_from_split_file(json_file: Union[str, Path], split_type: str):
         return [base_path / f for f in data[split_type]]
     else:
         return [json_file.parent / f for f in data[split_type]]
+
+def load_data_from_labels_file(json_file: Union[str, Path], split_type: str):
+    if isinstance(json_file, str):
+        json_file = Path(json_file)
+    assert json_file.exists(), f"File {json_file.resolve()} does not exist!"
+    with json_file.open("r") as f:
+        data = json.load(f)
+    return data[split_type]
+
 
 
 def render_configurations(
