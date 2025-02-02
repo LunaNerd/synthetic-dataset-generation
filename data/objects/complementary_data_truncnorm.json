@@ -1,0 +1,21 @@
+{
+    "box_type_0": {
+        "mean_area": 949.1610305958133, 
+        "std_area": 684.2441790822692, 
+        "min_area": 25, 
+        "max_area": 40000
+    }, 
+    "box_type_1": {
+        "mean_area": 95.13408093612871, 
+        "std_area": 58.77897470347263, 
+        "min_area": 25, 
+        "max_area": 40000
+    },
+    "distractor": {
+        "mean_area": 10000.00,
+        "std_area": 3000,
+        "min_area": 25,
+        "max_area": 40000
+    }
+}
+    
