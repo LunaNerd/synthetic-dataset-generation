@@ -10,8 +10,11 @@ from src.generator.utils import PIL2array3C
 from src.image_augmentation.basic_augmentations import (
     augment_scale,
     augment_scale_std,
+    augment_scale_area_truncnorm,
     augment_rotation,
 )
+import os
+
 from src.image_augmentation.blendings import apply_blendings_and_paste_onto_background
 from src.image_augmentation.misc import (
     create_full_size_and_sharpened_mask,
@@ -127,6 +130,15 @@ def create_image_anno(
                         bg_w, 
                         complementary_data
                     )
+                elif AUGMENTATION_SIZE_OPTION == "PER_CLASS_TRUNC_NORM":
+                    foreground, mask, o_h, o_w = augment_scale_area_truncnorm(
+                        foreground, 
+                        bg_h, mask, 
+                        orig_h, 
+                        orig_w, 
+                        bg_w, 
+                        complementary_data
+                    )
                 elif AUGMENTATION_SIZE_OPTION == "GLOBAL":
                     foreground, mask, o_h, o_w = augment_scale(
                         foreground, bg_h, mask, orig_h, orig_w, bg_w
@@ -157,7 +169,6 @@ def create_image_anno(
             mask_category_ids.append(img_data.label_id)
             if idx >= len(objects):
                 continue
-        print(attempt)
         if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
             
             continue  # could not create image yet, thus trying again

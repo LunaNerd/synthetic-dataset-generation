@@ -8,3 +8,5 @@ data/demo_dataset_*/
 pyblur/
 requirements2.txt
 venv/
+new-venv/
+launch.json

@@ -5,7 +5,7 @@ from functools import partial
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Union, Dict, List
-
+from parallelbar import progress_map
 import tqdm
 
 from src.config import (
@@ -165,7 +165,8 @@ def render_configurations(
     else:
         p = Pool(NUMBER_OF_WORKERS, init_worker)
         try:
-            p.map(partial_func, params_list)
+            r = list(tqdm.tqdm(p.imap(partial_func, params_list), total=len(params_list)))
+            #p.map(partial_func, params_list)
         except KeyboardInterrupt:
             print("....\nCaught KeyboardInterrupt, terminating workers")
             p.terminate()

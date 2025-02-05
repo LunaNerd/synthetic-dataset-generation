@@ -33,6 +33,7 @@ def get_bbox_and_segmentation_of_single_object(mask, image_size):
         if len(contour) > 4:
             segmentation.append(contour)
     if len(segmentation) == 0:
+        print("Warning: segmentation contour finding + bbox calc failed, this will result in a missing label in the dataset, if error is rare, this is trivial and can be ignored, occurs more with small objects")
         return None
 
     pos = np.where(mask)
