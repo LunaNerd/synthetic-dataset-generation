@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 from PIL import Image, ImageFilter
 
+import os
+
 from src.config import INVERTED_MASK, MINFILTER_SIZE
 from src.config import OBJECT_CATEGORIES, OBJECT_COMPLEMENTARY_DATA_PATH
 
@@ -117,11 +119,34 @@ class ImgDataRGBA(BaseImgData):
                 new_img = np.asarray(img).astype(np.uint8)[:, :, :3]
                 # new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2RGB)
             else:
-                if img.mode == "RGBA":
+
+
+                if img.mode == "RGBA": 
+
+                    img_3 = img.convert('RGB')
+
+                    image_np = np.array(img_3)
+                    mask_np = np.array(img.split()[3])
+
+                    #print(image_np.shape)
+
+                    # Get the pixels inside the mask
+                    masked_pixels = image_np[mask_np != 255]
+
+                    # Calculate the average color
+                    mean_color = masked_pixels.mean(axis=0)
+                    
+
                     new_img = Image.new(
-                        "RGB", img.size, (255, 255, 255)
+                        "RGB", img.size, tuple(mean_color.astype(np.uint8))
                     )  # white background
+
                     new_img.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+                    #
+                    # poisson blend attempted fix
+                    #
+                    #new_img.paste(img)
+
                 else:
                     print(f"No RGBA channel found for {self.img_path}")
                     return None

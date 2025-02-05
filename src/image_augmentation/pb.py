@@ -9,6 +9,7 @@ MIT License: https://github.com/yskmt/pb/blob/master/LICENSE
 import numpy as np
 import scipy.sparse
 from scipy.sparse.linalg import spsolve
+import cv2
 
 
 def create_mask(img_mask, img_target, img_src, offset=(0, 0)):
@@ -97,87 +98,116 @@ def get_mixed_gradient_sum(img_src, img_target, i, j, h, w, ofs, c=1.0):
 def poisson_blend(
     img_mask, img_src, img_target, method="mix", c=1.0, offset_adj=(0, 0)
 ):
-    hm, wm = img_mask.shape
-    region_size = hm * wm
+    
+    # ToDo: change img mask from np.float64 to 8 bit integers
+    assert np.max(img_mask) < 1.00001
+    assert np.max(img_src) < 256 and np.max(img_src) >= 0
 
-    F = np.zeros((region_size, 3))
-    A = scipy.sparse.identity(region_size, format="lil")
+    #new_img_mask = np.uint8(img_mask * 255)
 
-    get_k = lambda i, j: i + j * hm
+    new_img_mask = np.full_like(img_mask, 255, dtype=np.uint8)
 
-    # plane insertion
-    if method in ["target", "src"]:
-        for i in range(hm):
-            for j in range(wm):
-                k = get_k(i, j)
+    new_img_src = np.uint8(img_src)
 
-                # ignore the edge case (# of neighboor is always 4)
-                if img_mask[i, j] == 1:
+    # print()
+    # print(offset_adj)
+    # print(img_target.shape)
+    # print(img_src.shape)
+    
+    try:
+        output = cv2.seamlessClone(
+            new_img_src, 
+            img_target, 
+            new_img_mask, 
+            [offset_adj[1] + int(round(img_src.shape[1] / 2)), offset_adj[0] + int(round(img_src.shape[0]) / 2)], 
+            cv2.MIXED_CLONE_WIDE)
+            #cv2.NORMAL_CLONE_WIDE)
+    except:
+        print("...failed")
+        return img_target
+    
+    return output
+    # hm, wm = img_mask.shape
+    # region_size = hm * wm
 
-                    if method == "target":
-                        F[k] = img_target[i + offset_adj[0], j + offset_adj[1]]
-                    elif method == "src":
-                        F[k] = img_src[i, j]
-                else:
-                    F[k] = img_target[i + offset_adj[0], j + offset_adj[1]]
+    # F = np.zeros((region_size, 3))
+    # A = scipy.sparse.identity(region_size, format="lil")
 
-    # poisson blending
-    else:
-        if method == "mix":
-            grad_func = lambda ii, jj: get_mixed_gradient_sum(
-                img_src, img_target, ii, jj, hm, wm, offset_adj, c=c
-            )
-        else:
-            grad_func = lambda ii, jj: get_gradient_sum(img_src, ii, jj, hm, wm)
+    # get_k = lambda i, j: i + j * hm
 
-        for i in range(hm):
-            for j in range(wm):
-                k = get_k(i, j)
+    # # plane insertion
+    # if method in ["target", "src"]:
+    #     for i in range(hm):
+    #         for j in range(wm):
+    #             k = get_k(i, j)
 
-                # ignore the edge case (# of neighboor is always 4)
-                if img_mask[i, j] == 1:
-                    f_star = np.array([0.0, 0.0, 0.0])
+    #             # ignore the edge case (# of neighboor is always 4)
+    #             if img_mask[i, j] == 1:
 
-                    if img_mask[i - 1, j] == 1:
-                        A[k, k - 1] = -1
-                    else:
-                        f_star += img_target[i - 1 + offset_adj[0], j + offset_adj[1]]
+    #                 if method == "target":
+    #                     F[k] = img_target[i + offset_adj[0], j + offset_adj[1]]
+    #                 elif method == "src":
+    #                     F[k] = img_src[i, j]
+    #             else:
+    #                 F[k] = img_target[i + offset_adj[0], j + offset_adj[1]]
 
-                    if img_mask[i + 1, j] == 1:
-                        A[k, k + 1] = -1
-                    else:
-                        f_star += img_target[i + 1 + offset_adj[0], j + offset_adj[1]]
+    # # poisson blending
+    # else:
+    #     if method == "mix":
+    #         grad_func = lambda ii, jj: get_mixed_gradient_sum(
+    #             img_src, img_target, ii, jj, hm, wm, offset_adj, c=c
+    #         )
+    #     else:
+    #         grad_func = lambda ii, jj: get_gradient_sum(img_src, ii, jj, hm, wm)
 
-                    if img_mask[i, j - 1] == 1:
-                        A[k, k - hm] = -1
-                    else:
-                        f_star += img_target[i + offset_adj[0], j - 1 + offset_adj[1]]
+    #     for i in range(hm):
+    #         for j in range(wm):
+    #             k = get_k(i, j)
 
-                    if img_mask[i, j + 1] == 1:
-                        A[k, k + hm] = -1
-                    else:
-                        f_star += img_target[i + offset_adj[0], j + 1 + offset_adj[1]]
+    #             # ignore the edge case (# of neighboor is always 4)
+    #             if img_mask[i, j] == 1:
+    #                 f_star = np.array([0.0, 0.0, 0.0])
 
-                    A[k, k] = 4
-                    F[k] = grad_func(i, j) + f_star
+    #                 if img_mask[i - 1, j] == 1:
+    #                     A[k, k - 1] = -1
+    #                 else:
+    #                     f_star += img_target[i - 1 + offset_adj[0], j + offset_adj[1]]
 
-                else:
-                    F[k] = img_target[i + offset_adj[0], j + offset_adj[1]]
+    #                 if img_mask[i + 1, j] == 1:
+    #                     A[k, k + 1] = -1
+    #                 else:
+    #                     f_star += img_target[i + 1 + offset_adj[0], j + offset_adj[1]]
 
-    A = A.tocsr()
+    #                 if img_mask[i, j - 1] == 1:
+    #                     A[k, k - hm] = -1
+    #                 else:
+    #                     f_star += img_target[i + offset_adj[0], j - 1 + offset_adj[1]]
 
-    img_pro = np.empty_like(img_target.astype(np.uint8))
-    img_pro[:] = img_target.astype(np.uint8)
+    #                 if img_mask[i, j + 1] == 1:
+    #                     A[k, k + hm] = -1
+    #                 else:
+    #                     f_star += img_target[i + offset_adj[0], j + 1 + offset_adj[1]]
 
-    for l in range(3):
-        # x = pyamg.solve(A, F[:, l], verb=True, tol=1e-15, maxiter=100)
-        x = spsolve(A, F[:, l])
-        x[x > 255] = 255
-        x[x < 0] = 0
-        x = np.array(x, img_pro.dtype)
+    #                 A[k, k] = 4
+    #                 F[k] = grad_func(i, j) + f_star
 
-        img_pro[
-            offset_adj[0] : offset_adj[0] + hm, offset_adj[1] : offset_adj[1] + wm, l
-        ] = x.reshape(hm, wm, order="F")
+    #             else:
+    #                 F[k] = img_target[i + offset_adj[0], j + offset_adj[1]]
 
-    return img_pro
+    # A = A.tocsr()
+
+    # img_pro = np.empty_like(img_target.astype(np.uint8))
+    # img_pro[:] = img_target.astype(np.uint8)
+
+    # for l in range(3):
+    #     # x = pyamg.solve(A, F[:, l], verb=True, tol=1e-15, maxiter=100)
+    #     x = spsolve(A, F[:, l])
+    #     x[x > 255] = 255
+    #     x[x < 0] = 0
+    #     x = np.array(x, img_pro.dtype)
+
+    #     img_pro[
+    #         offset_adj[0] : offset_adj[0] + hm, offset_adj[1] : offset_adj[1] + wm, l
+    #     ] = x.reshape(hm, wm, order="F")
+
+    # return img_pro
