@@ -157,7 +157,7 @@ def create_image_anno(
             )
             # Apply blending
             apply_blendings_and_paste_onto_background(
-                backgrounds, blending_list, foreground, mask, x, y
+                backgrounds, blending_list, foreground, mask, x, y, debug_file_name=os.path.basename(img_data.img_path)
             )
             # Create mask
             masks.append(

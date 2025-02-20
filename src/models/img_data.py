@@ -10,6 +10,7 @@ import os
 from src.config import INVERTED_MASK, MINFILTER_SIZE
 from src.config import OBJECT_CATEGORIES, OBJECT_COMPLEMENTARY_DATA_PATH
 
+from src.poisson_config import POISSON_BACKGROUND_STRATEGY
 
 class BaseImgData:
     # (Class variable, behaves different from object variable, is shared acros all objects
@@ -120,33 +121,37 @@ class ImgDataRGBA(BaseImgData):
                 # new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2RGB)
             else:
 
-
                 if img.mode == "RGBA": 
+                    if POISSON_BACKGROUND_STRATEGY == 'ORIGINAL':
+                        # This ignores the A channel, resulting in the original background appearing again
+                        new_img = img.convert('RGB')
+                        return new_img
+                        
+                    elif POISSON_BACKGROUND_STRATEGY == 'MEAN':
+                        img_3 = img.convert('RGB')
 
-                    img_3 = img.convert('RGB')
+                        image_np = np.array(img_3)
+                        mask_np = np.array(img.split()[3])
 
-                    image_np = np.array(img_3)
-                    mask_np = np.array(img.split()[3])
+                        #print(image_np.shape)
 
-                    #print(image_np.shape)
+                        # Get the pixels outside the mask
+                        masked_pixels = image_np[mask_np != 255]
 
-                    # Get the pixels inside the mask
-                    masked_pixels = image_np[mask_np != 255]
+                        # Calculate the average color
+                        mean_color = masked_pixels.mean(axis=0)
+                        color = tuple(mean_color.astype(np.uint8))
 
-                    # Calculate the average color
-                    mean_color = masked_pixels.mean(axis=0)
-                    
+                    elif POISSON_BACKGROUND_STRATEGY == 'WHITE':
+                        color = (255, 255, 255)
+                    else:
+                        raise Exception("invalid POISSON_BACKGROUND_STATEGY")
 
                     new_img = Image.new(
-                        "RGB", img.size, tuple(mean_color.astype(np.uint8))
-                    )  # white background
+                        "RGB", img.size, color
+                    )  # even background
 
                     new_img.paste(img, mask=img.split()[3])  # 3 is the alpha channel
-                    #
-                    # poisson blend attempted fix
-                    #
-                    #new_img.paste(img)
-
                 else:
                     print(f"No RGBA channel found for {self.img_path}")
                     return None

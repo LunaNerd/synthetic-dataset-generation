@@ -16,7 +16,7 @@ from src.image_augmentation.gamma_correction import adjust_gamma_of_image
 
 
 def apply_blendings_and_paste_onto_background(
-    backgrounds, blending_list, foreground, mask, x, y
+    backgrounds, blending_list, foreground, mask, x, y, debug_file_name=""
 ):
     for i in range(len(blending_list)):
         new_foreground = foreground.copy()
@@ -33,8 +33,9 @@ def apply_blendings_and_paste_onto_background(
         elif blending_list[i].startswith("poisson"):
             if blending_list[i] == "poisson":
                 backgrounds[i] = apply_poisson_blending(
-                    new_foreground, new_mask, backgrounds[i], (y, x)
+                    new_foreground, new_mask, backgrounds[i], (y, x), debug_file_name=debug_file_name
                 )
+                continue
             else:
                 try:
                     backgrounds[i] = apply_poisson_blending_fast(
@@ -58,7 +59,7 @@ def apply_blendings_and_paste_onto_background(
         backgrounds[i].paste(new_foreground, (x, y), new_mask)
 
 
-def apply_poisson_blending(foreground, mask, background, offset):
+def apply_poisson_blending(foreground, mask, background, offset, debug_file_name = ""):
     (
         img_mask,
         img_src,
@@ -68,11 +69,20 @@ def apply_poisson_blending(foreground, mask, background, offset):
         background, foreground, mask, offset
     )
     blend_method = "normal"  # random.choice(['normal', 'mixed'])
-    background_array = poisson_blend(
-        img_mask, img_src, img_target, method=blend_method, offset_adj=offset_adj
-    )
-    new_background = Image.fromarray(background_array, "RGB")
-    return new_background
+    try:
+        background_array = poisson_blend(
+            img_mask, img_src, img_target, method=blend_method, offset_adj=offset_adj, debug_file_name=debug_file_name
+        )
+        new_background = Image.fromarray(background_array, "RGB")
+        return new_background   
+
+    except IndexError:
+        print("reverting to None method")
+        new_background = Image.fromarray(img_target, "RGB")
+        new_background.paste(foreground, (offset[1], offset[0]), mask)
+        return new_background
+
+
 
 
 def create_temporary_input_for_poisson_blending(background, foreground, mask, offset):

@@ -10,7 +10,9 @@ import numpy as np
 import scipy.sparse
 from scipy.sparse.linalg import spsolve
 import cv2
+from random import randrange
 
+from poisson_config import POISSON_MASK_STRATEGY, POISSON_BLEND_STRATEGY, IF_DEBUG_FILES, DEBUG_FILES_PATH
 
 def create_mask(img_mask, img_target, img_src, offset=(0, 0)):
     """
@@ -94,37 +96,232 @@ def get_mixed_gradient_sum(img_src, img_target, i, j, h, w, ofs, c=1.0):
 
     return v_sum
 
+def save_debug_img(pil_image, debug_file_name, description=""):
+    if IF_DEBUG_FILES:       
+        p = f"{DEBUG_FILES_PATH}{debug_file_name}{description}.png"        
+        if len(pil_image.shape) == 2: 
+            cv2.imwrite(p, pil_image)
+        else:
+            if pil_image.shape[2] == 3:
+                cv2.imwrite(p, cv2.cvtColor(pil_image, cv2.COLOR_RGB2BGR))
+            elif pil_image.shape[2] == 4:
+                cv2.imwrite(p, cv2.cvtColor(pil_image, cv2.COLOR_RGBA2BGRA))
+            else:
+                cv2.imwrite(p, pil_image)
 
+
+#
+# Failed idea (images are too compressed by the time they get here to create new usefull border imitations)
+#
+"""
+def custom_copyMakeBorder(img, mask, pad_size):
+
+    new_img = cv2.copyMakeBorder(img, pad_size, pad_size, pad_size, pad_size, cv2.BORDER_REFLECT)
+    new_mask = cv2.copyMakeBorder(mask, pad_size, pad_size, pad_size, pad_size, cv2.BORDER_REFLECT)
+
+    height, width, _ = new_img.shape
+
+    background_points = np.argwhere(new_mask==0)
+
+    def find_nearest_point(points, given_point):
+        #points = np.array(points)
+        #given_point = np.array(given_point)
+        # Calculate the Euclidean distance between the given point and all points in the list
+        distances = np.linalg.norm(points - given_point, axis=1)
+        nearest_index = np.argmin(distances)
+        nearest_point = points[nearest_index]
+        return nearest_point
+    
+    # Process the top and bottom edges
+    for x in range(width):
+        for y in range(pad_size):
+            top_mask_pixel = new_mask[x, y]
+            bottom_mask_pixel = new_mask[x, height - 1 - y]
+            
+            # Process top edge pixel (x, y)
+            ### If pixel on border originates from inside the foreground mask, change it too...
+            if top_mask_pixel == 255:
+                p = find_nearest_point(background_points, [x, y])
+                new_img[x, y] = new_img[p[0], p[1]]
+
+            # Process bottom edge pixel (x, height - 1 - y)
+            if bottom_mask_pixel == 255:
+                p = find_nearest_point(background_points, [x, y])
+                new_img[x, height - 1 - y] = new_img[p[0], p[1]]
+
+    # Process the left and right edges
+    for y in range(height):
+        for x in range(pad_size):
+            left_mask_pixel = new_mask[x, y]
+            right_mask_pixel = new_mask[width - 1 - x, y]
+
+            # Process left edge pixel (x, y)
+            if left_mask_pixel == 255:
+                p = find_nearest_point(background_points, [x, y])
+                new_img[x, y] = new_img[p[0], p[1]]
+
+            # Process right edge pixel (width - 1 - x, y)
+            if right_mask_pixel == 255:
+                p = find_nearest_point(background_points, [width - 1 - x, y])
+                new_img[width - 1 - x, y] = new_img[p[0], p[1]]
+    return new_img
+"""
+            
 def poisson_blend(
-    img_mask, img_src, img_target, method="mix", c=1.0, offset_adj=(0, 0)
+    img_mask, img_src, img_target, method="mix", c=1.0, offset_adj=(0, 0), debug_file_name=""
 ):
     
     # ToDo: change img mask from np.float64 to 8 bit integers
-    assert np.max(img_mask) < 1.00001
+    assert np.max(img_mask) < 1.00001 and np.min(img_mask) >= 0.0
     assert np.max(img_src) < 256 and np.max(img_src) >= 0
 
-    #new_img_mask = np.uint8(img_mask * 255)
-
-    new_img_mask = np.full_like(img_mask, 255, dtype=np.uint8)
-
     new_img_src = np.uint8(img_src)
+    new_img_mask = np.uint8(img_mask) * 255
 
-    # print()
-    # print(offset_adj)
-    # print(img_target.shape)
-    # print(img_src.shape)
+    if debug_file_name:
+        debug_file_name = debug_file_name.split(".")[0]
+    else:
+        debug_file_name = randrange(1000, 2000, 1)
+
+    match POISSON_MASK_STRATEGY:
+        case "RECTANGLE":
+            new_img_mask = np.full_like(new_img_mask, 255, dtype=np.uint8)
+            
+        case "RECTANGLE+BORDER":
+            pad_size = 5
+
+            if new_img_mask[0][0] == 0:
+                bg_px = new_img_src[0][0]
+            elif new_img_mask[0][new_img_mask.shape[1]-1] == 0:
+                bg_px = new_img_src[0][new_img_mask.shape[1]-1]
+            elif new_img_mask[new_img_mask.shape[0]-1][new_img_mask.shape[1]-1] == 0:
+                bg_px = new_img_src[new_img_mask.shape[0]-1][new_img_mask.shape[1]-1]
+            elif new_img_mask[new_img_mask.shape[0]-1][0] == 0:
+                bg_px = new_img_src[new_img_mask.shape[0]-1][0]
+            else:
+                print("Warning: none of the corner pixels where background, picking first background pixel in image")
+                bg_px = new_img_src.where(new_img_mask == 0)[0]
+                
+            new_img_mask = np.full_like(new_img_mask, 255, dtype=np.uint8)
+            new_img_mask = cv2.copyMakeBorder(new_img_mask, pad_size, pad_size, pad_size, pad_size, cv2.BORDER_CONSTANT, value=255)
+
+            color = [int(bg_px[0]), int(bg_px[1]), int(bg_px[2])]
+
+            new_img_src = cv2.copyMakeBorder(new_img_src, pad_size, pad_size, pad_size, pad_size, cv2.BORDER_CONSTANT, None, color)       
+            
+            save_debug_img(new_img_src, debug_file_name, description="_mean")
+
+        case "DILATE":
+            visualizing_results = False
+            if visualizing_results:
+                number = randrange(1000, 2000, 1)
+            
+            #if visualizing_results:
+            #    cv2.imwrite(f"/project_ghent/luversmi/attempt2/test/{debug_file_name}_before.png", new_img_src)
+
+            save_debug_img(new_img_src, debug_file_name, "_before")
+            pad_size = 6
+            
+            # Unsuccessfull for now
+            #padded_image = custom_copyMakeBorder(new_img_src, new_img_mask, pad_size)         
+            
+            #
+            #
+            masked_pixels = new_img_src[new_img_mask != 255]
+
+            # Calculate the average color
+            mean_color = masked_pixels.mean(axis=0)
+            color = [mean_color[0], mean_color[1], mean_color[2]]
+            #
+            #
+
+            padded_image = cv2.copyMakeBorder(new_img_src, pad_size, pad_size, pad_size, pad_size, cv2.BORDER_CONSTANT, value=color)
+            padded_mask = cv2.copyMakeBorder(new_img_mask, pad_size, pad_size, pad_size, pad_size, cv2.BORDER_CONSTANT, value=0)
+            
+            save_debug_img(padded_image, debug_file_name, "_border")
+            save_debug_img(padded_mask, debug_file_name, "_mask_before")
+
+            #cv2.imwrite(f"/project_ghent/luversmi/attempt2/test/{debug_file_name}_bordervb.png", padded_image)
+                  
+            kernel = np.ones((11,11),np.uint8)
+            new_img_mask = cv2.dilate(padded_mask,kernel,iterations = 1)
+            alpha_data = np.uint8(new_img_mask)
+
+            save_debug_img(alpha_data, debug_file_name, "_mask_after")
+            rgba = cv2.cvtColor(padded_image, cv2.COLOR_RGB2RGBA)
+            rgba[:, :, 3] = alpha_data
+
+
+            save_debug_img(rgba, debug_file_name, "_after")
+            # if visualizing_results:
+            #     cv2.imwrite(f"/project_ghent/luversmi/attempt2/test/{debug_file_name}_mask_after.png", rgba)
+
+            new_img_src = padded_image
+
+        case "ONLY_OBJECT":
+            new_img_mask = np.uint8(img_mask * 255)
+            
+        case _:
+            raise Exception("Invallid POISSON_MASK_STRATEGY")
+
+    offset = [offset_adj[1] + int(round(img_src.shape[1] / 2)), offset_adj[0] + int(round(img_src.shape[0]) / 2)]
+    
+    shape = img_src.shape
+    shape2 = img_mask.shape
+
+    match POISSON_BLEND_STRATEGY:
+        case "NORMAL_WIDE":
+            strategy = cv2.NORMAL_CLONE_WIDE
+        case "MIXED_WIDE":
+            strategy = cv2.MIXED_CLONE_WIDE
+        case _:
+            raise Exception("invalid POISSON_BLEND_STRATEGY")
     
     try:
         output = cv2.seamlessClone(
             new_img_src, 
             img_target, 
             new_img_mask, 
-            [offset_adj[1] + int(round(img_src.shape[1] / 2)), offset_adj[0] + int(round(img_src.shape[0]) / 2)], 
-            cv2.MIXED_CLONE_WIDE)
-            #cv2.NORMAL_CLONE_WIDE)
-    except:
-        print("...failed")
+            offset, 
+            strategy
+        )
+        return output
+
+    except Exception as e:
+        #print(type(e))
+        exception_border = np.max(new_img_mask.shape)
+
+        save_debug_img(img_target, debug_file_name, "_exept_before")
+
+        temp_img_target = cv2.copyMakeBorder(img_target, exception_border, exception_border, exception_border, exception_border, cv2.BORDER_REFLECT)
+        
+        output = cv2.seamlessClone(
+            new_img_src, 
+            temp_img_target, 
+            new_img_mask, 
+            [int(offset[0]+exception_border), int(offset[1]+exception_border)], 
+            strategy
+        )
+
+        output = output[exception_border:output.shape[0]-exception_border, exception_border:output.shape[1]-exception_border, :]
+        img_target = output.copy()
+        save_debug_img(img_target, debug_file_name, "_exept_after")
+
+        
+        #print("Poisson-blending failed: \t reverting to 'None' method, this error is because flower overlaps with border background")
         return img_target
+
+    # try:
+    #     output = cv2.seamlessClone(
+    #         new_img_src, 
+    #         img_target, 
+    #         new_img_mask, 
+    #         [offset_adj[1] + int(round(img_src.shape[1] / 2)), offset_adj[0] + int(round(img_src.shape[0]) / 2)], 
+    #         cv2.MIXED_CLONE_WIDE)
+    #         #cv2.NORMAL_CLONE_WIDE)
+    # except:
+    #     print("...failed")
+    #     return img_target
     
     return output
     # hm, wm = img_mask.shape
