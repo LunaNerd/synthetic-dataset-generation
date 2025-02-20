@@ -5,6 +5,7 @@
 
 # Synthetic Dataset Generation
 
+<!---
 > This repository is a modified (and extended) version
 > of [debidatta/syndata-generation](https://github.com/debidatta/syndata-generation), which
 > hopefully is more convenient to use. All credits to the original authors (also see [Citation](#citation)).
@@ -18,6 +19,22 @@
     </span>
     <br>
 </p>
+-->
+
+
+> This repository is a modified (and extended) version
+> of [a-nau/synthetic-dataset-generation](https://github.com/a-nau/synthetic-dataset-generation), which is adapted for the creation of synthetic data
+> with small objects (more specifically flowers).
+> Not all the original functionallity is kept as it was not needed for my usecase and also could not be tested on my available hardware.
+> The major missing feature is being able to use a GPU to speed up Poisson blending via Docker. (Feel free to fork this repository again if this is needed for your usecase).
+> This part of a bigger project to create synthetic data for flower detection on drone images using images downloaded from [GBIF](https://www.gbif.org/), a aggregator or citizen science images of flowers and animals with usefull metadata accessable via API. (see ... for more detail)
+
+
+What was added and changed to this repository:
+- More configurability of the poisson blending and a implementation that works on small objects using OpenCV
+- Examples of config files with visual examples of the results
+- Being able to configure the size range of objects per class. This way small flowers can get a smaller range then bigger flowers.
+
 
 This repo helps you to very easily create your own instance segmentation dataset rapidly. What do you need?
 The relevant resources, i.e. an image pool of
@@ -28,18 +45,15 @@ The relevant resources, i.e. an image pool of
 - splits for training, validation and test (of your resources) as described [here](data/readme.md)
 
 The rest will be handled by this repository :) If you need help gathering data for the image pool, check
-our [project page](https://a-nau.github.io/parcel2d/) with details on image scraping and asset selection.
-
-This version was developed as part of a [paper](https://arxiv.org/abs/2210.09814) ([citation](#citation)), also check
-the [project page](https://a-nau.github.io/parcel2d/) for more details.
+the [project page from a-nau](https://a-nau.github.io/parcel2d/) with details about general image scraping and asset selection using search engines like Google, Bing and ... . Check ... for gathering data from GBIF.
 
 ## Usage
 
-There two places to make configurations:
+There three places to make configurations:
 
 [config.py](src/config.py) to adjust e.g. (all variables are explained in the comments)
 
-- number of objects of interests
+- number of objects of interestsD
 - number of distractors
 - max IoU between objects
 - which blending methods are used

@@ -12,12 +12,11 @@ seed = 42
 random.seed(seed)
 np.random.seed(seed)
 
-
-DATA_DIR = ROOT / "data"
+DATA_DIR = Path("/project_ghent/luversmi/dataset/synthetic_data/experiment_truncnorm_poisson")
 
 
 if __name__ == "__main__":
-    dataset_name = "demo_dataset_5"  # Give your dataset a name
+    dataset_name = "coco_truncnorm_200_rect_mask_no_rot_background_fixed_flat"  # Give your dataset a name
     output_dir = (DATA_DIR / dataset_name).resolve()
     if output_dir.exists():
         shutil.rmtree(output_dir.as_posix())
@@ -25,9 +24,9 @@ if __name__ == "__main__":
     docker = False
     if not docker:
         # Adjust paths here if you are not using Docker
-        distractor_json = ROOT / "data/distractors/splits.json"
-        object_json = ROOT / "data/objects/splits.json"
-        background_json = ROOT / "data/backgrounds/splits.json"
+        distractor_json = "/project_ghent/luversmi/dataset/background/empty/empty_list.json"
+        object_json = "/project_ghent/luversmi/dataset/foreground/experiment_flowering/foreground_1500_tot.json"
+        background_json = "/project_ghent/luversmi/dataset/background/empty/with_rotation.json"
     else:
         distractor_json = "/data/distractors/splits.json"
         object_json = "/data/objects/splits.json"
@@ -38,12 +37,12 @@ if __name__ == "__main__":
         distractor_json=str(distractor_json),
         background_json=str(background_json),
         number_of_images={
-            "train": 5,
+            "train": 200,
             "validation": 0,
             "test": 0,
         },  # multiplied by blending methods,
         dontocclude=True,  # enable occlusion checking of objects
-        rotation=True,  # enable random rotation of objects
+        rotation=False,  # enable random rotation of objects
         scale=True,  # enable random scaling of objects
-        multithreading=False,  # enable multithreading for faster dataset generation
+        multithreading=True,  # enable multithreading for faster dataset generation
     )
