@@ -1,1 +1,1 @@
-config_truncnorm_6250_poisson_none_rect_5_mean_mixed.py
+/project_ghent/luversmi/attempt2/synthetic-dataset-generation/src/config_demo_examples/config_truncnorm_200.py

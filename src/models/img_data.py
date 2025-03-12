@@ -10,6 +10,8 @@ import os
 from src.config import INVERTED_MASK, MINFILTER_SIZE
 from src.config import OBJECT_CATEGORIES, OBJECT_COMPLEMENTARY_DATA_PATH
 
+from src.generator.debug import save_debug_img, save_debug_img_pil
+
 from src.poisson_config import POISSON_BACKGROUND_STRATEGY
 
 class BaseImgData:
@@ -88,6 +90,7 @@ class BaseImgData:
 class ImgDataRGBA(BaseImgData):
     def __init__(self, img_path: Path, label_id, label=None):
         super().__init__(img_path, label_id, label=label)
+        self.bg_color = None
 
     def load_complementary_data(self):
         if not ImgDataRGBA.complementary_data:
@@ -100,13 +103,19 @@ class ImgDataRGBA(BaseImgData):
                 ImgDataRGBA.complementary_data = json.load(json_f)
         return ImgDataRGBA.complementary_data.get(self.label, None)
 
+
     def get_mask(self, opencv=False):
         with open(self.img_path.as_posix(), "rb") as f:
             image = Image.open(f)
+
+            img_name = os.path.basename(self.img_path).split(".png")[0]
+            
+            #save_debug_img_pil(image.split()[3], img_name, "_get_mask_before" )
             if image.mode == "RGBA":
                 mask = image.split()[3].filter(
                     ImageFilter.MinFilter(MINFILTER_SIZE)
                 )  # MinFilter better than threshold
+                #save_debug_img_pil(mask, img_name, "_get_mask_after")
                 if opencv:
                     mask = np.asarray(mask).astype(np.uint8)
             else:
@@ -117,42 +126,53 @@ class ImgDataRGBA(BaseImgData):
         with open(self.img_path.as_posix(), "rb") as f:
             img = Image.open(f)
             if opencv:
+                raise Exception("Not Implemented in this fork")
                 new_img = np.asarray(img).astype(np.uint8)[:, :, :3]
                 # new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2RGB)
             else:
-
                 if img.mode == "RGBA": 
+
+                    img_3 = img.convert('RGB')
+
+                    image_np = np.array(img_3)
+                    mask_np = np.array(img.split()[3])
+
+                    #print(image_np.shape)
+
+                    # Get the pixels outside the mask
+                    masked_pixels = image_np[mask_np != 255]
+                    # print("masked: ")
+                    # print(masked_pixels.shape)
+                    # print()
+
+                    # Calculate the average color
+                    mean_color = masked_pixels.mean(axis=0)
+
+                    self.bg_color = tuple(mean_color.astype(np.uint8))
+
                     if POISSON_BACKGROUND_STRATEGY == 'ORIGINAL':
                         # This ignores the A channel, resulting in the original background appearing again
-                        new_img = img.convert('RGB')
-                        return new_img
+                        return img_3
                         
                     elif POISSON_BACKGROUND_STRATEGY == 'MEAN':
-                        img_3 = img.convert('RGB')
+                        new_img = Image.new(
+                            "RGB", img.size, self.bg_color
+                        )  # even background
 
-                        image_np = np.array(img_3)
-                        mask_np = np.array(img.split()[3])
+                        new_img.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+                        return new_img
 
-                        #print(image_np.shape)
-
-                        # Get the pixels outside the mask
-                        masked_pixels = image_np[mask_np != 255]
-
-                        # Calculate the average color
-                        mean_color = masked_pixels.mean(axis=0)
-                        color = tuple(mean_color.astype(np.uint8))
-
-                    elif POISSON_BACKGROUND_STRATEGY == 'WHITE':
-                        color = (255, 255, 255)
+                    #elif POISSON_BACKGROUND_STRATEGY == 'WHITE':
+                    #    self.bg_color = (255, 255, 255)
+                    
                     else:
                         raise Exception("invalid POISSON_BACKGROUND_STATEGY")
 
-                    new_img = Image.new(
-                        "RGB", img.size, color
-                    )  # even background
-
-                    new_img.paste(img, mask=img.split()[3])  # 3 is the alpha channel
                 else:
                     print(f"No RGBA channel found for {self.img_path}")
                     return None
         return new_img
+
+    def get_bg_color(self):
+
+        return self.bg_color

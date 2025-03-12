@@ -1,0 +1,1 @@
+/project_ghent/luversmi/attempt2/synthetic-dataset-generation/src/config_truncnorm_200.py

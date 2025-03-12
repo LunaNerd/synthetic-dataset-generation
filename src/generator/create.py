@@ -40,12 +40,17 @@ def create_image_anno_wrapper(
     del args["categories"]
     anno_files = args["anno_files"]
     del args["anno_files"]
+
+    #print(anno_files)
+    dirname = anno_files[0].parents[0].name
+
     # Create synthesized images, including masks and labels
     img_files, masks, mask_category_ids = create_image_anno(
         scale_augment=scale_augment,
         rotation_augment=rotation_augment,
         blending_list=blending_list,
         dontocclude=dontocclude,
+        dirname=dirname,
         **args
     )
     # Generate MS COCO style annotations from these and save
@@ -72,6 +77,7 @@ def create_image_anno(
     rotation_augment=False,
     blending_list=["none"],
     dontocclude=False,
+    dirname="debug"
 ):
     """Add data augmentation, synthesizes images and generates annotations according to given parameters
 
@@ -120,6 +126,9 @@ def create_image_anno(
                 foreground, mask, orig_h, orig_w = loaded_data
             # Augmentations
             o_w, o_h = orig_w, orig_h
+            #print(mask)
+            #print(mask.getextrema())
+            #print(set(mask.getdata()))
             if scale_augment:
                 if AUGMENTATION_SIZE_OPTION == "PER_CLASS_STD":
                     foreground, mask, o_h, o_w = augment_scale_std(
@@ -145,19 +154,23 @@ def create_image_anno(
                 )
                 else:
                     raise ValueError("Invalid AUGMENTATION_SIZE_OPTION")
+            #print(set(mask.getdata()))
+            #print()
             if rotation_augment:
                 max_degrees = MAX_DEGREES
                 foreground, mask, o_h, o_w = augment_rotation(
                     foreground, bg_h, mask, max_degrees, bg_w
                 )
             # Determine position
+
+            # TODO: look what this code does to the masks?
             xmin, xmax, ymin, ymax = img_data.get_annotation_from_mask()
             x, y, attempt = find_valid_object_position(
                 already_syn, dontocclude, bg_h, o_h, o_w, bg_w, xmax, xmin, ymax, ymin
             )
             # Apply blending
             apply_blendings_and_paste_onto_background(
-                backgrounds, blending_list, foreground, mask, x, y, debug_file_name=os.path.basename(img_data.img_path)
+                backgrounds, blending_list, foreground, mask, x, y, background_color=img_data.get_bg_color(), dirname=dirname, debug_file_name=os.path.basename(img_data.img_path)
             )
             # Create mask
             masks.append(
