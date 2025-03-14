@@ -7,7 +7,6 @@ from scipy.stats import truncnorm
 
 import math
 
-
 def augment_rotation(foreground, h, mask, max_degrees, w):
     while True:
         rot_degrees = random.randint(-max_degrees, max_degrees)
@@ -39,55 +38,74 @@ def augment_scale(foreground, bg_h, mask, fg_h, fg_w, bg_w):
             break
         else:
             print("\tWarning: image scaling had to be redone because foreground was bigger then background, if you see this warning often, concider reducing the max scale of foreground objects")
-        
-
+    
     return foreground, mask, o_h, o_w
 
-def augment_scale_std(foreground, bg_h, mask, fg_h, fg_w, bg_w, complementary_data):
-    mean_rel_size = complementary_data["mean_rel_size"]
-    std_rel_size = complementary_data["std_rel_size"]
-    min_rel_size = complementary_data["min_rel_size"]
-    max_rel_size = complementary_data["max_rel_size"]
-    
-    while True:
-        scale = random.gauss(mean_rel_size, std_rel_size)
-        scale = max(scale, min_rel_size)
-        scale = min(scale, max_rel_size)
+def augment_scale_rand_range(foreground, mask, bg_w, bg_h, orig_w, orig_h, complementary_data): #min_rel_scale, max_rel_scale, min_n_pixels = 5):
+    ##
+    ## This code is used for my baseline experiments but it results in flowers that are on average too small
+    ##
+    min_rel_scale = complementary_data["min_rel_size"]
+    max_rel_scale = complementary_data["max_rel_size"]
 
-        wh_ratio = fg_w / fg_h
+    rel_scale = random.uniform(min_rel_scale, max_rel_scale)
 
-        # wanted_w_pixels = max(bg_w * scale, min_rel_size)
-        # wanted_w_pixels = min(bg_w * scale, max_rel_size)
+    max_obj_h, max_obj_w = rel_scale * bg_h, rel_scale * bg_w
 
-        # wanted_h_pixels = max(bg_h * scale, min_pixels)
-        # wanted_h_pixels = min(bg_h * scale, min_pixels)
+    obj_scale = min(max_obj_h/orig_h, max_obj_w/orig_w)
 
-        wanted_h_pixels = bg_h * scale
-        wanted_w_pixels = bg_w * scale
-
-        #print(scale)
-        
-        o_w = None
-        o_h = None
-
-        if fg_w > fg_h:
-            o_h = wanted_h_pixels
-            o_w = int(o_h * wh_ratio)
-            o_h = int(o_h)
-
-        else:
-            #fg_w <= fg_h
-            o_w = wanted_w_pixels
-            o_h = int(o_w / wh_ratio)
-            o_w = int(o_w)
-
-        if bg_w - o_w > 0 and bg_h - o_h > 0 and o_w > 0 and o_h > 0:
-            break
-
+    o_w = int(obj_scale*orig_w)
+    o_h = int(obj_scale*orig_h)
     foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
     mask = mask.resize((o_w, o_h), Image.LANCZOS)
 
     return foreground, mask, o_h, o_w
+
+# def augment_scale_std(foreground, bg_h, mask, fg_h, fg_w, bg_w, complementary_data):
+#     mean_rel_size = complementary_data["mean_rel_size"]
+#     std_rel_size = complementary_data["std_rel_size"]
+#     min_rel_size = complementary_data["min_rel_size"]
+#     max_rel_size = complementary_data["max_rel_size"]
+    
+#     while True:
+#         scale = random.gauss(mean_rel_size, std_rel_size)
+#         scale = max(scale, min_rel_size)
+#         scale = min(scale, max_rel_size)
+
+#         wh_ratio = fg_w / fg_h
+
+#         # wanted_w_pixels = max(bg_w * scale, min_rel_size)
+#         # wanted_w_pixels = min(bg_w * scale, max_rel_size)
+
+#         # wanted_h_pixels = max(bg_h * scale, min_pixels)
+#         # wanted_h_pixels = min(bg_h * scale, min_pixels)
+
+#         wanted_h_pixels = bg_h * scale
+#         wanted_w_pixels = bg_w * scale
+
+#         #print(scale)
+        
+#         o_w = None
+#         o_h = None
+
+#         if fg_w > fg_h:
+#             o_h = wanted_h_pixels
+#             o_w = int(o_h * wh_ratio)
+#             o_h = int(o_h)
+
+#         else:
+#             #fg_w <= fg_h
+#             o_w = wanted_w_pixels
+#             o_h = int(o_w / wh_ratio)
+#             o_w = int(o_w)
+
+#         if bg_w - o_w > 0 and bg_h - o_h > 0 and o_w > 0 and o_h > 0:
+#             break
+
+#     foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
+#     mask = mask.resize((o_w, o_h), Image.LANCZOS)
+
+#     return foreground, mask, o_h, o_w
 
 def augment_scale_area_truncnorm(foreground, bg_h, mask, fg_h, fg_w, bg_w, complementary_data):
     mean_area = complementary_data["mean_area"]

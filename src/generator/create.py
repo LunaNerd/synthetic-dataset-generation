@@ -9,11 +9,13 @@ from src.generator.annotations import (
 from src.generator.utils import PIL2array3C
 from src.image_augmentation.basic_augmentations import (
     augment_scale,
-    augment_scale_std,
+    augment_scale_rand_range,
     augment_scale_area_truncnorm,
     augment_rotation,
 )
 import os
+
+from src.generator.debug import debug_config
 
 from src.image_augmentation.blendings import apply_blendings_and_paste_onto_background
 from src.image_augmentation.misc import (
@@ -42,7 +44,8 @@ def create_image_anno_wrapper(
     del args["anno_files"]
 
     #print(anno_files)
-    dirname = anno_files[0].parents[0].name
+
+    debug_obj = debug_config(syn_img_nr=anno_files[0].parents[0].name)
 
     # Create synthesized images, including masks and labels
     img_files, masks, mask_category_ids = create_image_anno(
@@ -50,7 +53,7 @@ def create_image_anno_wrapper(
         rotation_augment=rotation_augment,
         blending_list=blending_list,
         dontocclude=dontocclude,
-        dirname=dirname,
+        debug_obj=debug_obj,
         **args
     )
     # Generate MS COCO style annotations from these and save
@@ -77,7 +80,7 @@ def create_image_anno(
     rotation_augment=False,
     blending_list=["none"],
     dontocclude=False,
-    dirname="debug"
+    debug_obj: debug_config=None 
 ):
     """Add data augmentation, synthesizes images and generates annotations according to given parameters
 
@@ -120,25 +123,29 @@ def create_image_anno(
             # Load object and mask; augment it; find object position;
             loaded_data = img_data.load_object_data()
             complementary_data = img_data.load_complementary_data()
+
             if loaded_data is None:
                 continue
             else:
                 foreground, mask, orig_h, orig_w = loaded_data
+                debug_obj.object_file_name = img_data.img_path
+
             # Augmentations
             o_w, o_h = orig_w, orig_h
             #print(mask)
             #print(mask.getextrema())
             #print(set(mask.getdata()))
             if scale_augment:
-                if AUGMENTATION_SIZE_OPTION == "PER_CLASS_STD":
-                    foreground, mask, o_h, o_w = augment_scale_std(
+                if AUGMENTATION_SIZE_OPTION == "PER_CLASS_RAND_RANGE":
+                    foreground, mask, o_h, o_w = augment_scale_rand_range(
                         foreground, 
-                        bg_h, mask, 
+                        mask, 
+                        bg_w, bg_h, 
                         orig_h, 
                         orig_w, 
-                        bg_w, 
                         complementary_data
                     )
+
                 elif AUGMENTATION_SIZE_OPTION == "PER_CLASS_TRUNC_NORM":
                     foreground, mask, o_h, o_w = augment_scale_area_truncnorm(
                         foreground, 
@@ -170,7 +177,8 @@ def create_image_anno(
             )
             # Apply blending
             apply_blendings_and_paste_onto_background(
-                backgrounds, blending_list, foreground, mask, x, y, background_color=img_data.get_bg_color(), dirname=dirname, debug_file_name=os.path.basename(img_data.img_path)
+                backgrounds, blending_list, foreground, mask, x, y, debug_obj=debug_obj, bg_color=img_data.get_bg_color
+                #backgrounds, blending_list, foreground, mask, x, y, background_color=img_data.get_bg_color(), dirname=dirname, debug_file_name=os.path.basename(img_data.img_path)
             )
             # Create mask
             masks.append(

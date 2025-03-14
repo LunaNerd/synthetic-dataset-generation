@@ -16,7 +16,8 @@ from src.image_augmentation.gamma_correction import adjust_gamma_of_image
 
 
 def apply_blendings_and_paste_onto_background(
-    backgrounds, blending_list, foreground, mask, x, y, background_color, dirname="debug", debug_file_name=""
+    backgrounds, blending_list, foreground, mask, x, y, debug_obj=None, bg_color=[0, 0, 0]
+    #backgrounds, blending_list, foreground, mask, x, y, background_color, dirname="debug", debug_file_name=""
 ):
     for i in range(len(blending_list)):
         new_foreground = foreground.copy()
@@ -33,18 +34,20 @@ def apply_blendings_and_paste_onto_background(
         elif blending_list[i].startswith("poisson"):
             if blending_list[i] == "poisson":
                 backgrounds[i] = apply_poisson_blending(
-                    new_foreground, new_mask, backgrounds[i], (y, x), background_color, dirname=dirname, debug_file_name=debug_file_name
+                    new_foreground, new_mask, backgrounds[i], (y,x), bg_color=bg_color, debug_obj=debug_obj
+                    #new_foreground, new_mask, backgrounds[i], (y, x), background_color, dirname=dirname, debug_file_name=debug_file_name
                 )
                 continue
             
             # TODO: remove because not implemented
             else:
-                try:
-                    backgrounds[i] = apply_poisson_blending_fast(
-                        new_foreground, new_mask, backgrounds[i], (y, x)
-                    )
-                except Exception as e:
-                    print(f"Error: {e}; are you sure you have CUDA enabled?")
+                raise Exception("fast poisson blending not implemented in this fork")
+                # try:
+                #     backgrounds[i] = apply_poisson_blending_fast(
+                #         new_foreground, new_mask, backgrounds[i], (y, x)
+                #     )
+                # except Exception as e:
+                #     print(f"Error: {e}; are you sure you have CUDA enabled?")
             continue
         elif blending_list[i] == "gamma_correction":
             new_foreground = apply_gamma_correction(new_foreground)
@@ -61,7 +64,8 @@ def apply_blendings_and_paste_onto_background(
         backgrounds[i].paste(new_foreground, (x, y), new_mask)
 
 
-def apply_poisson_blending(foreground, mask, background, offset, background_color, dirname="debug", debug_file_name = ""):
+def apply_poisson_blending(foreground, mask, background, offset, background_color, debug_obj):
+#def apply_poisson_blending(foreground, mask, background, offset, background_color, dirname="debug", debug_file_name = ""):
     (
         img_mask,
         img_src,
@@ -70,20 +74,20 @@ def apply_poisson_blending(foreground, mask, background, offset, background_colo
     ) = create_temporary_input_for_poisson_blending(
         background, foreground, mask, offset
     )
-    # TODO: clean up non working function variables
-    blend_method = "normal"  # random.choice(['normal', 'mixed'])
-    try:
-        background_array = poisson_blend(
-            img_mask, img_src, img_target, method=blend_method, offset_adj=offset_adj, background_color=background_color, dirname=dirname, debug_file_name=debug_file_name
-        )
-        new_background = Image.fromarray(background_array, "RGB")
-        return new_background   
 
-    except IndexError:
-        print("reverting to None method")
-        new_background = Image.fromarray(img_target, "RGB")
-        new_background.paste(foreground, (offset[1], offset[0]), mask)
-        return new_background
+    background_array = poisson_blend(
+        img_mask,
+        img_src,
+        img_target,
+        offset_adj=offset_adj,
+        bg_color=bg_color,
+        debug_obj=debug_obj
+    )
+    # background_array = poisson_blend(
+    #     img_mask, img_src, img_target, method=blend_method, offset_adj=offset_adj, background_color=background_color, dirname=dirname, debug_file_name=debug_file_name
+    # )
+    new_background = Image.fromarray(background_array, "RGB")
+    return new_background 
 
 
 
@@ -98,36 +102,36 @@ def create_temporary_input_for_poisson_blending(background, foreground, mask, of
     return img_mask, img_src, img_target, offset_adj
 
 
-def apply_poisson_blending_fast(foreground, mask, background, offset, backend="cuda"):
-    (
-        img_mask,
-        img_src,
-        img_target,
-        offset_adj,
-    ) = create_temporary_input_for_poisson_blending(
-        background, foreground, mask, offset
-    )
-    tmp_dir = root_dir / "tmp" / str(uuid.uuid4())
-    tmp_dir.parent.mkdir(exist_ok=True)
-    tmp_dir.mkdir(exist_ok=True)
-    mask_path = tmp_dir / "mask.jpg"
-    src_path = tmp_dir / "src.jpg"
-    target_path = tmp_dir / "target.jpg"
-    result_path = tmp_dir / "result.jpg"
-    cv2.imwrite(mask_path.as_posix(), img_mask * 255)
-    cv2.imwrite(
-        src_path.as_posix(), cv2.cvtColor(img_src.astype(np.uint8), cv2.COLOR_BGR2RGB)
-    )
-    cv2.imwrite(
-        target_path.as_posix(),
-        cv2.cvtColor(img_target.astype(np.uint8), cv2.COLOR_BGR2RGB),
-    )
-    cmd = f"fpie -s {src_path} -m {mask_path} -t {target_path} -o {result_path.resolve()} -h1 {offset_adj[0]} -w1 {offset[1]} -b {backend} -n 5000 -g src"
-    process = subprocess.Popen(cmd.split(" "))
-    process.wait()
-    new_background = Image.open(result_path)
-    shutil.rmtree(tmp_dir)
-    return new_background
+# def apply_poisson_blending_fast(foreground, mask, background, offset, backend="cuda"):
+#     (
+#         img_mask,
+#         img_src,
+#         img_target,
+#         offset_adj,
+#     ) = create_temporary_input_for_poisson_blending(
+#         background, foreground, mask, offset
+#     )
+#     tmp_dir = root_dir / "tmp" / str(uuid.uuid4())
+#     tmp_dir.parent.mkdir(exist_ok=True)
+#     tmp_dir.mkdir(exist_ok=True)
+#     mask_path = tmp_dir / "mask.jpg"
+#     src_path = tmp_dir / "src.jpg"
+#     target_path = tmp_dir / "target.jpg"
+#     result_path = tmp_dir / "result.jpg"
+#     cv2.imwrite(mask_path.as_posix(), img_mask * 255)
+#     cv2.imwrite(
+#         src_path.as_posix(), cv2.cvtColor(img_src.astype(np.uint8), cv2.COLOR_BGR2RGB)
+#     )
+#     cv2.imwrite(
+#         target_path.as_posix(),
+#         cv2.cvtColor(img_target.astype(np.uint8), cv2.COLOR_BGR2RGB),
+#     )
+#     cmd = f"fpie -s {src_path} -m {mask_path} -t {target_path} -o {result_path.resolve()} -h1 {offset_adj[0]} -w1 {offset[1]} -b {backend} -n 5000 -g src"
+#     process = subprocess.Popen(cmd.split(" "))
+#     process.wait()
+#     new_background = Image.open(result_path)
+#     shutil.rmtree(tmp_dir)
+#     return new_background
 
 
 def apply_illumination_change(img, mask):

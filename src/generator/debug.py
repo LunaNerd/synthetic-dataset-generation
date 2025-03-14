@@ -1,34 +1,40 @@
 import cv2
 import os
 
-from src.poisson_config import IF_DEBUG_FILES, DEBUG_FILES_PATH
+from src.config import IF_DEBUG_FILES, DEBUG_FILES_PATH
 
-def save_debug_img_pil(pil_image, debug_file_name, description=""):
-    if not os.path.exists(DEBUG_FILES_PATH):
-        os.makedirs(DEBUG_FILES_PATH)
+class debug_config:
+    def __init__(self, syn_img_nr="", object_file_name="", debug_img_dest_path=DEBUG_FILES_PATH):
+        self.object_file_name = object_file_name
+        self.syn_img_nr = syn_img_nr
+        self.debug_img_dest_path = debug_img_dest_path
 
-    if IF_DEBUG_FILES:
-        p = f"{DEBUG_FILES_PATH}{debug_file_name}{description}.png"
-        pil_image.save(p)
+        if IF_DEBUG_FILES:
+            temp_path = os.path.join(self.object_file_name, syn_img_nr)
+            if not os.path.exists(temp_path):
+                os.makedirs(temp_path)
 
-def save_debug_img(pil_image_arr, debug_file_name, dirname, description=""):
+    def __create_path__(self, description):
+        return os.path.join(self.debug_img_dest_path, self.syn_img_nr, f"{self.object_file_name}{description}.png")
 
-    if IF_DEBUG_FILES:    
-        if not os.path.exists(DEBUG_FILES_PATH):
-            os.makedirs(DEBUG_FILES_PATH)
+    def save_pil(pil_image, description=""):
+        if IF_DEBUG_FILES:
+            
+            p = __create_path__(description)
+            pil_image.save(p)
 
-        numbered_path = os.path.join(DEBUG_FILES_PATH, dirname)
-        if not os.path.exists(numbered_path):
-            os.makedirs(numbered_path)
+    def save(pil_image_arr, description=""):
 
-        p = os.path.join(numbered_path, f"{debug_file_name}{description}.png")
-              
-        if len(pil_image_arr.shape) == 2: 
-            cv2.imwrite(p, pil_image_arr)
-        else:
-            if pil_image_arr.shape[2] == 3:
-                cv2.imwrite(p, cv2.cvtColor(pil_image_arr, cv2.COLOR_RGB2BGR))
-            elif pil_image_arr.shape[2] == 4:
-                cv2.imwrite(p, cv2.cvtColor(pil_image_arr, cv2.COLOR_RGBA2BGRA))
-            else:
+        if IF_DEBUG_FILES:
+
+            p = self.__create_path__(description)
+                
+            if len(pil_image_arr.shape) == 2: 
                 cv2.imwrite(p, pil_image_arr)
+            else:
+                if pil_image_arr.shape[2] == 3:
+                    cv2.imwrite(p, cv2.cvtColor(pil_image_arr, cv2.COLOR_RGB2BGR))
+                elif pil_image_arr.shape[2] == 4:
+                    cv2.imwrite(p, cv2.cvtColor(pil_image_arr, cv2.COLOR_RGBA2BGRA))
+                else:
+                    cv2.imwrite(p, pil_image_arr)

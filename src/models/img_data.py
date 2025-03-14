@@ -10,7 +10,7 @@ import os
 from src.config import INVERTED_MASK, MINFILTER_SIZE
 from src.config import OBJECT_CATEGORIES, OBJECT_COMPLEMENTARY_DATA_PATH
 
-from src.generator.debug import save_debug_img, save_debug_img_pil
+#from src.generator.debug import save_debug_img, save_debug_img_pil
 
 from src.poisson_config import POISSON_BACKGROUND_STRATEGY
 
