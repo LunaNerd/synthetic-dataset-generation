@@ -32,8 +32,10 @@
 
 What was added and changed to this repository:
 - More configurability of the poisson blending and a implementation that works on small objects using OpenCV
-- Examples of config files with visual examples of the results
-- Being able to configure the size range of objects per class. This way small flowers can get a smaller range then bigger flowers.
+- (WIP) Examples of config files with visual examples of the results
+- Being able to configure the size range of objects per class. This way different flower species can get a different size range
+- The size distribution can be configured between a random range and other distribution types
+- Foreground objects are able to be of different classes instead of just one
 
 
 This repo helps you to very easily create your own instance segmentation dataset rapidly. What do you need?
@@ -45,7 +47,7 @@ The relevant resources, i.e. an image pool of
 - splits for training, validation and test (of your resources) as described [here](data/readme.md)
 
 The rest will be handled by this repository :) If you need help gathering data for the image pool, check
-the [project page from a-nau](https://a-nau.github.io/parcel2d/) with details about general image scraping and asset selection using search engines like Google, Bing and ... . Check ... for gathering data from GBIF.
+the [project page from a-nau](https://a-nau.github.io/parcel2d/) with details about general image scraping and asset selection using search engines like Google, Bing and ... . Check (Github repository still WIP) for gathering data from GBIF.
 
 ## Usage
 
@@ -58,6 +60,12 @@ There three places to make configurations:
 - max IoU between objects
 - which blending methods are used
 - ... (see [config.py](src/config.py))
+
+[config.py](src/poisson_config.py) to adjust the poisson specific configuration eg:
+ - to use normal or mixed poisson blending
+ - border size
+ - border type
+ - debug files destination
 
 [generate_synthetic_data.py](src/tools/generate_synthetic_data.py) to set
 
@@ -82,24 +90,6 @@ And run
 ```shell
 python src/tools/generate_synthetic_data.py
 ```
-
-### Docker
-
-Build using
-
-```shell
-source scripts/docker_build.sh           # for CPU
-source scripts/GPU/docker_build.sh       # for GPU (faster Poisson Blending)
-```
-
-Run dataset generation using
-
-```shell
-source scripts/docker_run.sh             # for CPU
-source scripts/GPU/docker_run.sh         # for GPU (faster Poisson Blending)
-```
-
-Please check the respective files, in order to make any changes.
 
 ## Citation
 
