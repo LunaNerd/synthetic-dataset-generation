@@ -1,0 +1,20 @@
+{
+    "box_type_0": {
+        "mean_rel_size": 0.1,
+        "std_rel_size": 0.05,
+        "min_rel_size": 0.01,
+        "max_rel_size": 0.5
+    },
+    "box_type_1": {
+        "mean_rel_size": 0.2,
+        "std_rel_size": 0.1,
+        "min_rel_size": 0.01,
+        "max_rel_size": 0.4
+    },
+    "distractor": {
+        "mean_rel_size": 0.3,
+        "std_rel_size": 0.1,
+        "min_rel_size": 0.01,
+        "max_rel_size": 0.6
+    }
+}

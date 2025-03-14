@@ -1,23 +1,29 @@
 from pathlib import Path
 import sys
+import os
 
 ROOT = Path(__file__).parent.parent.parent
 sys.path.append(ROOT.as_posix())
 import shutil
 import random
 import numpy as np
-from src.generator.handler import generate_synthetic_dataset
 
 seed = 42
 random.seed(seed)
 np.random.seed(seed)
 
-
 DATA_DIR = ROOT / "data"
+config_path = ROOT / "src/config_demo_examples/config_baseline_005.py"
 
+# https://galea.medium.com/symlink-use-cases-shortcuts-app-config-files-43b8ecf75a5
+os.unlink(ROOT / "src/config.py")
+os.symlink(config_path, ROOT / "src/config.py")
+
+from src.generator.handler import generate_synthetic_dataset
 
 if __name__ == "__main__":
-    dataset_name = "demo_dataset_5"  # Give your dataset a name
+
+    dataset_name = "demo_baseline_005"  # Give your dataset a name
     output_dir = (DATA_DIR / dataset_name).resolve()
     if output_dir.exists():
         shutil.rmtree(output_dir.as_posix())
