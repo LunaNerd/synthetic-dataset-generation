@@ -10,7 +10,7 @@ https://si-apc.pages.in2p3.fr/computer-science-crash-course/pyenv/pyenv-intro.ht
 python -m venv venv
 
 # activate venv
-source venv/bin/activate
+source new-venv/bin/activate
 ```
 
 ## make the pyblur directory inside this repository the default one
@@ -21,6 +21,10 @@ cd ..
 ```
 
 ## install other packages
+
+pip install parallelbar  
+pip install opencv-python
+pip install matplotlib
 first do: `pip install cmake`  
 Then repeat `python src/tools/generate_synthetic_data.py` and install the missing packages  
 

@@ -14,35 +14,36 @@ np.random.seed(seed)
 
 DATA_DIR = ROOT / "data"
 
+config_path = "src/config_demo_examples/config_truncnorm_poisson_200.py"
+poisson_config_path = "src/config_demo_examples/poisson_config_recommended.py"
 
 if __name__ == "__main__":
-    dataset_name = "demo_dataset_truncnorm"  # Give your dataset a name
+    # https://galea.medium.com/symlink-use-cases-shortcuts-app-config-files-43b8ecf75a5
+    os.symlink(config_path, "src/config.py")
+    os.symlink(poisson_config_path, "src/poisson_config.py")
+
+    dataset_name = "flowers_truncnorm_poisson_200"  # Give your dataset a name
     output_dir = (DATA_DIR / dataset_name).resolve()
     if output_dir.exists():
         shutil.rmtree(output_dir.as_posix())
     output_dir.mkdir()
-    docker = False
-    if not docker:
-        # Adjust paths here if you are not using Docker
-        distractor_json = ROOT / "data/distractors/splits.json"
-        object_json = ROOT / "data/objects/splits.json"
-        background_json = ROOT / "data/backgrounds/splits.json"
-    else:
-        distractor_json = "/data/distractors/splits.json"
-        object_json = "/data/objects/splits.json"
-        background_json = "/data/backgrounds/splits.json"
+
+    distractor_json = "/project_ghent/luversmi/dataset/background/empty/empty_list.json"
+    object_json = "/project_ghent/luversmi/dataset/foreground/experiment_flowering/foreground_1500_syn.json"
+    background_json = "/project_ghent/luversmi/dataset/background/empty/with_rotation.json"
+
     generate_synthetic_dataset(
         output_dir=str(output_dir),
         object_json=str(object_json),
         distractor_json=str(distractor_json),
         background_json=str(background_json),
         number_of_images={
-            "train": 5,
+            "train": 200,
             "validation": 0,
             "test": 0,
         },  # multiplied by blending methods,
         dontocclude=True,  # enable occlusion checking of objects
         rotation=True,  # enable random rotation of objects
         scale=True,  # enable random scaling of objects
-        multithreading=True,  # enable multithreading for faster dataset generation
+        multithreading=False,  # enable multithreading for faster dataset generation
     )

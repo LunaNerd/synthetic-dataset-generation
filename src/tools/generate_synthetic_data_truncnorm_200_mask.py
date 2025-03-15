@@ -12,37 +12,32 @@ seed = 42
 random.seed(seed)
 np.random.seed(seed)
 
-DATA_DIR = Path("/project_ghent/luversmi/dataset/synthetic_data/experiment_truncnorm_poisson")
-
+DATA_DIR = Path("/project_ghent/luversmi/dataset/synthetic_data/experiment_truncnorm_poisson_det")
 
 if __name__ == "__main__":
-    dataset_name =  "coco_6250_truncnorm_none_rect5+mixed+original+avg"  # Give your dataset a name
+    dataset_name =  "coco_truncnorm_200_normal_wide_5px"  # Give your dataset a name
     output_dir = (DATA_DIR / dataset_name).resolve()
     if output_dir.exists():
         shutil.rmtree(output_dir.as_posix())
     output_dir.mkdir()
-    docker = False
-    if not docker:
-        # Adjust paths here if you are not using Docker
-        distractor_json = "/project_ghent/luversmi/dataset/background/empty/empty_list.json"
-        object_json = "/project_ghent/luversmi/dataset/foreground/experiment_flowering/foreground_1500_syn.json"
-        background_json = "/project_ghent/luversmi/dataset/background/empty/with_rotation.json"
-    else:
-        distractor_json = "/data/distractors/splits.json"
-        object_json = "/data/objects/splits.json"
-        background_json = "/data/backgrounds/splits.json"
+
+    distractor_json = "/project_ghent/luversmi/dataset/background/empty/empty_list.json"
+    object_json = "/project_ghent/luversmi/dataset/foreground/experiment_flowering/foreground_1500_syn.json"
+    background_json = "/project_ghent/luversmi/dataset/background/empty/with_rotation.json"
+
     generate_synthetic_dataset(
         output_dir=str(output_dir),
         object_json=str(object_json),
         distractor_json=str(distractor_json),
         background_json=str(background_json),
         number_of_images={
-            "train": 6250,
+            "train": 200,
             "validation": 0,
             "test": 0,
         },  # multiplied by blending methods,
         dontocclude=True,  # enable occlusion checking of objects
         rotation=False,  # enable random rotation of objects
+        # Rotation currently not tested and thus expect unexpected results
         scale=True,  # enable random scaling of objects
-        multithreading=True,  # enable multithreading for faster dataset generation
+        multithreading=False,  # enable multithreading for faster dataset generation
     )
